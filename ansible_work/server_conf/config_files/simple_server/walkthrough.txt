@@ -46,4 +46,22 @@ all : all ip addresses listed in the inventory it can be replaces with :
 !172.19.0.2 = all ips except this one
 dhcp-server = ping the ips that are a group of the group dhcp-server
 
+
+now this command is longer then it should be 
+so we make a file we call it ansible.cfg 
+and we write this to it
+
+[defaults]
+inventory = inventory (your inventory name)
+private_key_file = ~/.ssh/ansible (your private key)
+
+
+
+
+
+
+
+
+
+
 and this should end the simple ubuntu server part of the project XD
