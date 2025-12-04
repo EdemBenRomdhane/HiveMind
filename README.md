@@ -139,13 +139,13 @@ curl -X POST http://localhost:8080/api/events \
 
 ## 👥 Équipe
 
-| Rôle | Nom | Email |
-|------|-----|-------|
-| DevOps & Frontend | Ahmed Rayen Thabet | rayenthabet4real@gmail.com |
-| Data Stream Engineer | Adem Ben Romdhane | ademben147@gmail.com |
-| Security Engineer | Malek Boujazza | malek40581200@gmail.com |
-| AI Engineer | Eya Skhiri | ayaskhiri925@gmail.com |
-| Backend Developer | Jasser Lefi | jasserlafi14@gmail.com |
+| Rôle | Nom |
+|------|-----|
+| DevOps & Frontend | Ahmed Rayen Thabet |
+| Data Stream Engineer | Adem Ben Romdhane |
+| Security Engineer | Malek Boujazza |
+| AI Engineer | Eya Skhiri |
+| Backend Developer | Jasser Lefi |
 
 ---
 

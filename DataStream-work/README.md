@@ -212,6 +212,6 @@ curl -X POST http://localhost:8080/api/events \
 
 ## 👥 Équipe
 
-**Ingénieur Data Stream**: Adem Ben Romdhane (ademben147@gmail.com)
+**Ingénieur Data Stream**: Adem Ben Romdhane
 
 **Projet**: Automated Security for the Ecosystem
