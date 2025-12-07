@@ -3,6 +3,7 @@ package Caravane.publisher;
 import Caravane.events.FileChangedEvent;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +21,8 @@ public class ListnerPublisher {
 
     @Autowired
 private ApplicationEventPublisher ap;
-final Path pathToWatch = Paths.get("i will put here eventually the final path to watch so CHANGE ME !!!!!") ;
-
+    @Value("${watch.path}")
+    private Path pathToWatch;
 
 
     @PostConstruct
@@ -53,7 +54,7 @@ public void startwatching(){
                 WatchKey key = watchService.take();
 
 
-                //just making the output more human readable
+                //just making the output more human-readable
                 for (WatchEvent<?> event : key.pollEvents()){
                     WatchEvent.Kind<?> kind = event.kind();
                     String filename = event.context().toString();

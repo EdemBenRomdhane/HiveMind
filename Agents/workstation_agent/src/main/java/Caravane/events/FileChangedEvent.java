@@ -1,14 +1,16 @@
 package Caravane.events;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 
 
 
-@Component
+
 public class FileChangedEvent {
+
 
     private final String filename;
     private final String chngetype;

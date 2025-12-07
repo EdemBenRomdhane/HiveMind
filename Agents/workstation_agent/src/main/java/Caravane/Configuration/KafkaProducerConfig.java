@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-@PropertySource("classpath:kafka.properties")  // your properties file
+@PropertySource("classpath:application.properties")  // your properties file
 
 @Configuration
 public class KafkaProducerConfig {
