@@ -26,6 +26,7 @@ public class EventCollectorController {
             // Validate JSON
             JsonNode json = objectMapper.readTree(eventJson);
             logger.info("📩 Received HTTP Event: {}", eventJson);
+            logger.info("ℹ️ NOTE: Direct Kafka connection (localhost:9094) is preferred over REST API.");
 
             // Determine Topic based on device type (simple logic)
             String topic = determineTopicFromEvent(eventJson);

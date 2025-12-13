@@ -12,6 +12,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import java.util.Arrays;
 import java.util.HashSet;
 
+import org.apache.flink.connector.base.DeliveryGuarantee;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
+
 public class DataStreamJob {
 
     public static void main(String[] args) throws Exception {
@@ -29,13 +33,26 @@ public class DataStreamJob {
                 .setValueOnlyDeserializer(new SimpleStringSchema())
                 .build();
 
+        // Create Kafka Sink (Output)
+        KafkaSink<String> sink = KafkaSink.<String>builder()
+                .setBootstrapServers(KafkaConfig.BOOTSTRAP_SERVERS)
+                .setRecordSerializer(KafkaRecordSerializationSchema.builder()
+                        .setTopic(KafkaConfig.TOPIC_PROCESSED)
+                        .setValueSerializationSchema(new SimpleStringSchema())
+                        .build())
+                .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                .build();
+
         // Add Source
         DataStream<String> stream = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
         // Process Stream
         DataStream<String> processedStream = stream.map(new EventProcessor());
 
-        // Print result to stdout (for verification)
+        // Sink to Kafka (Output Topic)
+        processedStream.sinkTo(sink);
+
+        // Also Print result to stdout (for debugging)
         processedStream.print();
 
         // Execute program

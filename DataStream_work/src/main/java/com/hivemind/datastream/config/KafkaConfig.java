@@ -17,6 +17,9 @@ public class KafkaConfig {
         public static final String TOPIC_NETWORK = "device-events-network";
         public static final String TOPIC_SERVER = "device-events-server";
 
+        // Output Topic for processed events
+        public static final String TOPIC_PROCESSED = "processed-events";
+
         // Flink consumer topics - WORKSTATION ONLY in Phase 1
         public static final List<String> ALL_TOPICS = Arrays.asList(
                         TOPIC_WORKSTATION

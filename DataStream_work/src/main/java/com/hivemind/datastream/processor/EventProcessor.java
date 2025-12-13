@@ -2,6 +2,7 @@ package com.hivemind.datastream.processor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.flink.api.common.functions.MapFunction;
 
 public class EventProcessor implements MapFunction<String, String> {
@@ -10,23 +11,40 @@ public class EventProcessor implements MapFunction<String, String> {
     @Override
     public String map(String value) throws Exception {
         try {
-            JsonNode node = objectMapper.readTree(value);
-            String eventType = node.has("eventType") ? node.get("eventType").asText() : "UNKNOWN";
-            String deviceId = node.has("deviceId") ? node.get("deviceId").asText() : "UNKNOWN";
-            String severity = node.has("severity") ? node.get("severity").asText() : "UNKNOWN";
-            String username = node.has("username") ? node.get("username").asText() : "N/A";
-            String authStatus = node.has("authenticationStatus") ? node.get("authenticationStatus").asText() : "N/A";
+            JsonNode rawNode = objectMapper.readTree(value);
+            ObjectNode processedEvent = objectMapper.createObjectNode();
 
-            // Simple processing: Log high severity events
-            if ("HIGH".equals(severity) || "CRITICAL".equals(severity)) {
-                return String.format(
-                        "⚠️ ALERT: High severity event detected! [Type: %s, Device: %s, Severity: %s, User: %s, Auth: %s]",
-                        eventType, deviceId, severity, username, authStatus);
+            // Extract fields (with defaults)
+            String eventType = rawNode.has("eventType") ? rawNode.get("eventType").asText() : "UNKNOWN";
+            String deviceId = rawNode.has("deviceId") ? rawNode.get("deviceId").asText() : "UNKNOWN";
+            String severity = rawNode.has("severity") ? rawNode.get("severity").asText() : "UNKNOWN";
+            String username = rawNode.has("username") ? rawNode.get("username").asText() : "N/A";
+            String filename = rawNode.has("filename") ? rawNode.get("filename").asText() : "N/A";
+            String changeType = rawNode.has("changeType") ? rawNode.get("changeType").asText() : "N/A";
+
+            // Populate processed event
+            processedEvent.put("eventType", eventType);
+            processedEvent.put("deviceId", deviceId);
+            processedEvent.put("severity", severity);
+            processedEvent.put("username", username);
+            processedEvent.put("filename", filename);
+            processedEvent.put("changeType", changeType);
+            processedEvent.put("processedTimestamp", System.currentTimeMillis());
+
+            // Keep original timestamp if present
+            if (rawNode.has("timestamp")) {
+                processedEvent.put("eventTimestamp", rawNode.get("timestamp").asLong());
             }
 
-            return String.format("ℹ️ Processed event: [Type: %s, Device: %s, User: %s]", eventType, deviceId, username);
+            // Log HIGH severity for debugging console (still useful)
+            if ("HIGH".equals(severity) || "CRITICAL".equals(severity)) {
+                System.out.println("⚠️ ALERT: High severity event detected! Device: " + deviceId);
+            }
+
+            return objectMapper.writeValueAsString(processedEvent);
         } catch (Exception e) {
-            return "❌ Error processing event: " + e.getMessage();
+            System.err.println("❌ Error processing event: " + e.getMessage());
+            return null; // Handle nulls in filter if needed, or return error object
         }
     }
 }

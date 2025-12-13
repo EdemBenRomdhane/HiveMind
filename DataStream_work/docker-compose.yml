@@ -22,13 +22,13 @@ services:
       # Listen on both internal (29092) and external (9092) ports
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       # Advertise localhost:9094 for external clients, kafka:29092 for internal (Docker) clients
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   jobmanager:
-    image: flink:1.17.1-java11
+    image: flink:1.18-java17
     ports:
       - "8081:8081"
     command: jobmanager
@@ -39,7 +39,7 @@ services:
         jobmanager.rpc.address: jobmanager
 
   taskmanager:
-    image: flink:1.17.1-java11
+    image: flink:1.18-java17
     depends_on:
       - jobmanager
     command: taskmanager

@@ -28,7 +28,7 @@ Devices → DataStream (Kafka/Flink) → Backend (Spring Boot) → Database (Cas
 
 ## 🚀 Modules
 
-### 📊 [DataStream](./DataStream-work) - Traitement en temps réel
+### 📊 [DataStream](./DataStream_work) - Traitement en temps réel
 **Responsable**: Adem Ben Romdhane
 
 Collecte et traitement des événements en temps réel avec Apache Kafka et Apache Flink.
@@ -41,7 +41,7 @@ Collecte et traitement des événements en temps réel avec Apache Kafka et Apac
 - `device-events-iot`
 - `device-events-network`
 
-[📖 Documentation complète](./DataStream-work/README.md)
+[📖 Documentation complète](./DataStream_work/README.md)
 
 ---
 
@@ -92,48 +92,45 @@ Automatisation, déploiement, CI/CD et développement du tableau de bord React.
 git clone https://github.com/iluvumua/HiveMind.git
 cd HiveMind
 
-# 2. Démarrer le module DataStream
-cd DataStream-work
+# 2. Démarrer l'environnement Global
 docker-compose up -d
 
+# 2a. (Alternative) Démarrer uniquement le module DataStream
+# cd DataStream_work
+# docker-compose up -d
+
 # 3. Créer les topics Kafka
-for topic in device-events-workstation device-events-iot device-events-network device-events-server; do
+for topic in device-events-workstation device-events-iot device-events-network device-events-server processed-events; do
   docker exec kafka kafka-topics --create --bootstrap-server kafka:29092 --topic $topic --partitions 1 --replication-factor 1 --if-not-exists
 done
 
-# 4. Build et démarrer l'API
-mvn clean package -DskipTests
+# 4. Démarrer le Workstation Agent (Source de données)
+# Dans un nouveau terminal
+cd Agents/workstation_agent
 mvn spring-boot:run
 
-# 5. Tester l'API
-curl -X POST http://localhost:8080/api/events \
-  -H "Content-Type: application/json" \
-  -d '{"eventType":"LOGIN_FAILURE","deviceId":"WS-001","severity":"CRITICAL","username":"alice","authenticationStatus":"FAILURE"}'
+# 5. Vérifier les données
+# Les événements sont envoyés directement à Kafka (topic: device-events-workstation)
+# Le Flink Job les traite et les envoie vers 'processed-events'
 ```
 
 ---
 
-## 📡 API Endpoints
+## 📡 Interfaces & Topics
 
-### DataStream API
+### Kafka Topics (Principal Point d'Entrée)
 
-**Base URL**: `http://localhost:8080`
+Les agents envoient les données directement à Kafka sur le port **9094**.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/events` | Soumettre un événement de sécurité |
-| GET | `/api/health` | Vérifier l'état de l'API |
+| Topic | Description |
+|-------|-------------|
+| `device-events-workstation` | Événements bruts des postes de travail |
+| `device-events-server` | Événements bruts des serveurs |
+| `processed-events` | Événements enrichis par Flink (avec `filename`, `changeType`) |
 
-**Exemple de payload**:
-```json
-{
-  "eventType": "LOGIN_FAILURE",
-  "deviceId": "WS-001",
-  "severity": "CRITICAL",
-  "username": "alice",
-  "authenticationStatus": "FAILURE"
-}
-```
+### Legacy REST API (Obsolète)
+*L'ancienne API REST (`POST /api/events`) est conservée pour compatibilité mais l'ingestion directe Kafka est recommandée.*
+
 
 ---
 
@@ -151,7 +148,7 @@ curl -X POST http://localhost:8080/api/events \
 
 ## 📚 Documentation
 
-- [DataStream Module](./DataStream-work/README.md) - API Kafka/Flink
+- [DataStream Module](./DataStream_work/README.md) - API Kafka/Flink
 - [Backend API](#) - Services Spring Boot *(à venir)*
 - [ELK Configuration](#) - Monitoring et logs *(à venir)*
 - [AI Integration](#) - Ollama setup *(à venir)*
