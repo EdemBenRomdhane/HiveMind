@@ -5,7 +5,9 @@ spring:
   application:
     name: iot-device-service
   kafka:
-    bootstrap-servers: localhost:9092
+    # For Docker: use kafka:29092
+    # For local development: use localhost:9094
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
