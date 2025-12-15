@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # HiveMind - Automated Security for the Ecosystem
 
 > *"The caravan moves on, and the dogs bark"*
@@ -166,3 +167,28 @@ Projet académique - ENISO (École Nationale d'Ingénieurs de Sousse)
 ---
 
 **Status**: 🟢 En développement actif
+=======
+# Security System Backend
+
+Spring Boot backend for the automated security system.
+
+## Requirements
+- Java 17+
+- PostgreSQL
+- Apache Kafka
+
+## Configuration
+Update `src/main/resources/application.yml` with your database and Kafka credentials.
+
+## Running
+```bash
+./mvnw spring-boot:run
+```
+
+## API Endpoints
+- `GET /api/health`: Check system status.
+- `GET /api/users`: List users.
+- `POST /api/users`: Create user.
+- `GET /api/devices`: List devices.
+- `POST /api/devices`: Register device.
+>>>>>>> 778bd7e (this is my work)
