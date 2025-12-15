@@ -20,6 +20,9 @@ public class KafkaConfig {
         // Output Topic for processed events
         public static final String TOPIC_PROCESSED = "processed-events";
 
+        // Output Topic for filtered anomaly alerts (after Flink filtering)
+        public static final String TOPIC_ANOMALY_ALERTS = "anomaly-alerts";
+
         // Flink consumer topics - WORKSTATION ONLY in Phase 1
         public static final List<String> ALL_TOPICS = Arrays.asList(
                         TOPIC_WORKSTATION
