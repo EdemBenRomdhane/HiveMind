@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobmanager
+  namespace: hivemind
+  labels:
+    app: flink
+    component: jobmanager
+spec:
+  ports:
+  - port: 8081
+    name: ui
+    nodePort: 30085
+  - port: 6123
+    name: rpc
+  - port: 6124
+    name: blob
+  - port: 6125
+    name: query
+  type: NodePort
+  selector:
+    app: flink
+    component: jobmanager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+  namespace: hivemind
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: jobmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: flink:1.18-java17
+        args: ["jobmanager"]
+        ports:
+        - containerPort: 8081
+        - containerPort: 6123
+        - containerPort: 6124
+        - containerPort: 6125
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: "jobmanager"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.rpc.address: jobmanager
+            blob.server.port: 6124
+            query.server.port: 6125
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+  namespace: hivemind
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: flink:1.18-java17
+        args: ["taskmanager"]
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: "jobmanager"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.rpc.address: jobmanager
+            taskmanager.numberOfTaskSlots: 2
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flink-job-submitter
+  namespace: hivemind
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+      - name: wait-for-jobmanager
+        image: busybox
+        command: ['sh', '-c', 'until nc -z jobmanager 8081; do echo waiting for jobmanager; sleep 2; done;']
+      containers:
+      - name: job-submitter
+        image: flink:1.18-java17
+        command: ["/bin/bash", "/opt/flink/submit-job.sh"]
+        env:
+        - name: JOB_MANAGER_RPC_ADDRESS
+          value: "jobmanager"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        volumeMounts:
+        - name: jar-volume
+          mountPath: /opt/flink/usrlib
+        - name: script-volume
+          mountPath: /opt/flink/submit-job.sh
+          subPath: submit-job.sh
+      volumes:
+      - name: jar-volume
+        hostPath:
+          path: /home/edem/Documents/ProjetSemestrielle/HiveMind/DataStream_work/target
+      - name: script-volume
+        configMap:
+          name: flink-submit-script
+          defaultMode: 0777
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-submit-script
+  namespace: hivemind
+data:
+  submit-job.sh: |
+    #!/bin/bash
+    echo "Waiting for JobManager..."
+    sleep 10
+    echo "Submitting Flink Job..."
+    /opt/flink/bin/flink run -d -m jobmanager:8081 -c com.hivemind.datastream.DataStreamJob /opt/flink/usrlib/flink-job.jar
