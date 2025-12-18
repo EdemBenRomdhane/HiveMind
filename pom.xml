@@ -11,6 +11,7 @@
 	<groupId>caravane</groupId>
 	<artifactId>HiveMind</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
 	<name>HiveMind</name>
 	<description>project for Spring Boot</description>
 	<url/>

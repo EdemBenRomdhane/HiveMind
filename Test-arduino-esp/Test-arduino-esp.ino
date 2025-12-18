@@ -1,45 +1,79 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <time.h>
 
-const char* ssid = "realme C25Y";
-const char* password = "mlk123456";
-const char* serverUrl = "http://192.168.100.66:8080/iot/ingest-log"; // IP du backend
+// WiFi credentials
+const char* ssid = "Alpinia";
+const char* password = "Alpinia@2025";
+
+// Backend endpoint
+// Kafka REST Proxy endpoint
+// Note: Kafka REST Proxy (port 8083) is the standard bridge to Kafka
+const char* serverUrl = "http://192.168.100.141:8083/topics/device-events-iot";
+
+// Device ID
+const char* deviceId = "esp32-sensor-01";
 
 void setup() {
   Serial.begin(115200);
+
+  // Connect to WiFi
   WiFi.begin(ssid, password);
-
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
   }
+  Serial.println("Connected to WiFi");
 
-  Serial.println("\nConnected to WiFi");
+  // Init time
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 }
 
 void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+
+    // Create JSON payload in Kafka REST Proxy format
+    // Format: {"records": [{"value": {...}}]}
+    StaticJsonDocument<500> doc;
+    JsonArray records = doc.createNestedArray("records");
+    JsonObject record = records.createNestedObject();
+    JsonObject value = record.createNestedObject("value");
+    
+    value["deviceId"] = deviceId;
+    value["temperature"] = random(200, 300) / 10.0;
+    value["status"] = "ONLINE";
+    
+    time_t now;
+    time(&now);
+    char timeString[30];
+    strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+    value["timestamp"] = timeString;
+
+    String requestBody;
+    serializeJson(doc, requestBody);
+
+    // Send POST request to Kafka REST Proxy
     http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Content-Type", "application/vnd.kafka.json.v2+json");
+    
+    int httpResponseCode = http.POST(requestBody);
 
-    float temperature = random(200, 900) / 10.0; // 20.0 → 90.0
-    String status = temperature > 80 ? "OFFLINE" : "ONLINE";
-
-    // Fixed copy-paste artifacts (replaced 😕 with :)
-    String json = "{"
-      "\"deviceId\":\"esp32-01\","
-      "\"temperature\":" + String(temperature) + ","
-      "\"status\":\"" + status + "\""
-    "}";
-
-    int httpResponseCode = http.POST(json);
-
-    Serial.print("HTTP Response: ");
-    Serial.println(httpResponseCode);
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.print("Kafka Sync Response: ");
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.print("Error on sending to Kafka: ");
+      Serial.println(httpResponseCode);
+    }
 
     http.end();
+  } else {
+    Serial.println("WiFi Disconnected");
   }
 
-  delay(5000); // envoi toutes les 5 secondes
+  delay(5000);
 }

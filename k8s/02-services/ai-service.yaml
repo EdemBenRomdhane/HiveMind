@@ -20,6 +20,12 @@ spec:
         imagePullPolicy: IfNotPresent
         # No ports needed with hostNetwork
         env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        - name: TOPIC_LOGS
+          value: "processed-events"
+        - name: TOPIC_ALERTS
+          value: "anomaly-alerts"
         - name: OLLAMA_HOST
           value: "localhost:11434"
         - name: FLASK_ENV

@@ -94,9 +94,23 @@ def detect_anomaly(log_text: str, model: str = DEFAULT_MODEL) -> Dict:
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         
         if json_match:
-            # Parsing du JSON
-            result = json.loads(json_match.group(0))
-            
+            json_str = json_match.group(0)
+            try:
+                # Parsing du JSON
+                result = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                # Si erreur "Extra data", cela signifie qu'il y a du texte après le JSON valide
+                if "Extra data" in str(e):
+                    try:
+                        # On récupère uniquement la partie valide (jusqu'à l'erreur)
+                        logger.warning(f"Extra data detected across JSON, trimming at pos {e.pos}")
+                        json_str = json_str[:e.pos]
+                        result = json.loads(json_str)
+                    except Exception as nested_e:
+                        raise e # On relance l'erreur d'origine si ça échoue encore
+                else:
+                    raise e
+
             # Validation et normalisation du résultat
             validated_result = {
                 "anomaly": bool(result.get("anomaly", False)),
@@ -111,7 +125,7 @@ def detect_anomaly(log_text: str, model: str = DEFAULT_MODEL) -> Dict:
             
             logger.info(f"Analyse terminée - Anomalie: {validated_result['anomaly']} (confiance: {validated_result['confidence']:.2f})")
             return validated_result
-            
+
         else:
             # Aucun JSON trouvé dans la réponse
             logger.warning(f"Aucun JSON valide dans la réponse du modèle: {response_text[:100]}...")
@@ -122,16 +136,6 @@ def detect_anomaly(log_text: str, model: str = DEFAULT_MODEL) -> Dict:
                 "category": "parsing_error",
                 "model_used": model
             }
-            
-    except json.JSONDecodeError as e:
-        logger.error(f"Erreur de décodage JSON: {e}")
-        return {
-            "anomaly": False,
-            "confidence": 0.0,
-            "reason": f"Erreur de format JSON: {str(e)}",
-            "category": "json_error",
-            "model_used": model
-        }
         
     except Exception as e:
         logger.error(f"Erreur lors de l'appel à Ollama: {e}")

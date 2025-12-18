@@ -1,0 +1,21 @@
+package Caravane.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class KafkaProducer {
+
+    @Autowired
+    private KafkaTemplate<String, String> kft;
+
+    public void send(String topic, String msg) {
+        try {
+            kft.send(topic, msg).get(); // blocks
+            System.out.println("Message sent successfully to topic: " + topic);
+        } catch (Exception e) {
+            System.err.println("Failed to send message to topic " + topic + ": " + e.getMessage());
+        }
+    }
+}

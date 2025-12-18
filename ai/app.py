@@ -530,6 +530,16 @@ def internal_error(error):
 # ============================================================================
 
 if __name__ == "__main__":
+    # Import and start background monitoring
+    try:
+        print("DEBUG: Attempting to start background monitor...")
+        from monitor_logs import start_monitoring
+        start_monitoring()
+        print("DEBUG: Background monitor started!")
+    except Exception as e:
+        print(f"DEBUG: Failed to start background monitor: {e}")
+        logger.error(f"Failed to start background monitor: {e}")
+
     # Configuration
     PORT = int(os.getenv("PORT", 5001))
     HOST = os.getenv("HOST", "0.0.0.0")
