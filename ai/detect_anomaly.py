@@ -96,20 +96,19 @@ def detect_anomaly(log_text: str, model: str = DEFAULT_MODEL) -> Dict:
         if json_match:
             json_str = json_match.group(0)
             try:
-                # Parsing du JSON
+                # 1. Try direct parse
                 result = json.loads(json_str)
-            except json.JSONDecodeError as e:
-                # Si erreur "Extra data", cela signifie qu'il y a du texte après le JSON valide
-                if "Extra data" in str(e):
-                    try:
-                        # On récupère uniquement la partie valide (jusqu'à l'erreur)
-                        logger.warning(f"Extra data detected across JSON, trimming at pos {e.pos}")
-                        json_str = json_str[:e.pos]
-                        result = json.loads(json_str)
-                    except Exception as nested_e:
-                        raise e # On relance l'erreur d'origine si ça échoue encore
-                else:
-                    raise e
+            except json.JSONDecodeError:
+                try:
+                    # 2. Try simple single-quote fix
+                    normalized = json_str.replace("'", '"')
+                    # 3. Handle missing quotes on keys (common in tinyllama)
+                    normalized = re.sub(r'(\n\s*|{\s*|,\s*)([a-zA-Z0-9_]+)\s*:', r'\1"\2":', normalized)
+                    result = json.loads(normalized)
+                except Exception:
+                    logger.error(f"Failed to parse JSON even after heavy normalization: {json_str}")
+                    # Final fallback: return a basic failure dict to avoid crashing
+                    return {"anomaly": False, "confidence": 0, "reason": "AI Parsing Error", "category": "error"}
 
             # Validation et normalisation du résultat
             validated_result = {

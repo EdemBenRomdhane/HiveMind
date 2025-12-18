@@ -37,10 +37,17 @@ public class AnomalyDetectorService {
             }
         }
 
-        // 2. Check if Severity was already flagged (Legacy support or if Flink passes
-        // it)
+        // 2. Check if Severity was already flagged
         if (log.has("severity") && "HIGH".equalsIgnoreCase(log.get("severity").asText())) {
             return true;
+        }
+
+        // 3. Check for Temperature (IOT devices)
+        if (log.has("temperature")) {
+            double temp = log.get("temperature").asDouble();
+            if (temp > MAX_TEMP_THRESHOLD || temp < MIN_TEMP_THRESHOLD) {
+                return true;
+            }
         }
 
         return false;
@@ -60,6 +67,14 @@ public class AnomalyDetectorService {
     }
 
     public String getAnomalyDescription(com.fasterxml.jackson.databind.JsonNode log) {
+        if (log.has("temperature")) {
+            double temp = log.get("temperature").asDouble();
+            if (temp > MAX_TEMP_THRESHOLD) {
+                return "IoT Alert: Temperature too high (" + temp + "°C)";
+            } else if (temp < MIN_TEMP_THRESHOLD) {
+                return "IoT Alert: Temperature too low (" + temp + "°C)";
+            }
+        }
         if (log.has("changeType")) {
             return "Threat Detected: " + log.get("changeType").asText();
         }

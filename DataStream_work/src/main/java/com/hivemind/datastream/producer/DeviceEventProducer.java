@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hivemind.datastream.model.*;
 import com.hivemind.datastream.config.KafkaConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -14,23 +15,29 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DeviceEventProducer {
-    private final KafkaProducer<String, String> producer;
+    private final Producer<String, String> producer;
     private final ObjectMapper objectMapper;
     private final Random random = new Random();
 
     public DeviceEventProducer(String bootstrapServers) {
+        this(bootstrapServers, createDefaultProducer(bootstrapServers));
+    }
+
+    public DeviceEventProducer(String bootstrapServers, Producer<String, String> producer) {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        this.producer = producer;
+        System.out.println("✅ Kafka Producer initialized");
+    }
 
+    private static KafkaProducer<String, String> createDefaultProducer(String bootstrapServers) {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, 3);
-
-        this.producer = new KafkaProducer<>(props);
-        System.out.println("✅ Kafka Producer initialized");
+        return new KafkaProducer<>(props);
     }
 
     private void sendEvent(String topic, DeviceEvent event) {

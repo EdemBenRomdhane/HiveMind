@@ -25,7 +25,18 @@ public class LogConsumerService {
         System.out.println("Received processed event: " + logMessage);
 
         try {
-            com.fasterxml.jackson.databind.JsonNode logNode = objectMapper.readTree(logMessage);
+            com.fasterxml.jackson.databind.JsonNode logNode;
+            String trimmed = logMessage.trim();
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                logNode = objectMapper.readTree(trimmed);
+            } else {
+                // Wrap plain string in a JSON-like structure for the detector
+                com.fasterxml.jackson.databind.node.ObjectNode node = objectMapper.createObjectNode();
+                node.put("changeType", logMessage);
+                node.put("deviceId", "RAW_LOG");
+                node.put("severity", "UNKNOWN");
+                logNode = node;
+            }
 
             if (anomalyDetectorService.isAnomaly(logNode)) {
                 AnomalyAlert alert = new AnomalyAlert();
@@ -34,16 +45,11 @@ public class LogConsumerService {
                 // Extract fields from JSON
                 String deviceId = logNode.has("deviceId") ? logNode.get("deviceId").asText() : "UNKNOWN";
                 String username = logNode.has("username") ? logNode.get("username").asText() : "";
-                String changeType = logNode.has("changeType") ? logNode.get("changeType").asText() : "";
 
                 alert.setDeviceId(deviceId);
                 alert.setDescription(anomalyDetectorService.getAnomalyDescription(logNode));
-                alert.setDetectedValue(1.0); // Flag value for non-numeric anomalies
-
-                // If it's an Auth Event, mark as HIGH. Or let Detector decide.
-                // Detector returns TRUE if anomaly. We need to set Severity on the Alert.
-                alert.setSeverity("HIGH"); // If detector says yes, it's a threat.
-
+                alert.setDetectedValue(1.0);
+                alert.setSeverity("HIGH");
                 alert.setTimestamp(LocalDateTime.now());
 
                 anomalyDetectorService.addAnomaly(alert);
@@ -51,6 +57,7 @@ public class LogConsumerService {
             }
         } catch (Exception e) {
             System.err.println("Error processing log: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

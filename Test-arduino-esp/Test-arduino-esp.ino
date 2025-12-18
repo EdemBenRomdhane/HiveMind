@@ -4,13 +4,13 @@
 #include <time.h>
 
 // WiFi credentials
-const char* ssid = "Alpinia";
-const char* password = "Alpinia@2025";
+const char* ssid = "globalnet-2024";
+const char* password = "73361801";
 
 // Backend endpoint
 // Kafka REST Proxy endpoint
 // Note: Kafka REST Proxy (port 8083) is the standard bridge to Kafka
-const char* serverUrl = "http://192.168.100.141:8083/topics/device-events-iot";
+const char* serverUrl = "http://192.168.1.10:8083/topics/device-events-iot";
 
 // Device ID
 const char* deviceId = "esp32-sensor-01";
@@ -42,7 +42,9 @@ void loop() {
     JsonObject value = record.createNestedObject("value");
     
     value["deviceId"] = deviceId;
-    value["temperature"] = random(200, 300) / 10.0;
+    // random(200, 1200) / 10.0 gives 20.0 to 120.0
+    // Anomalies start at 100.0
+    value["temperature"] = random(200, 1200) / 10.0;
     value["status"] = "ONLINE";
     
     time_t now;

@@ -13,13 +13,13 @@ class EventProcessorTest {
 
     @Test
     void testMap_JsonStrategy() throws Exception {
-        String input = "{\"eventType\":\"FILE_CHANGED\",\"deviceId\":\"WS-AGENT\",\"severity\":\"LOW\",\"filename\":\"test.txt\",\"changeType\":\"CREATED\",\"timestamp\":1734531936000}";
+        String input = "{\"eventType\":\"TEMPERATURE_REPORT\",\"deviceId\":\"IOT-AGENT\",\"severity\":\"INFO\",\"temperature\":105.5,\"unit\":\"CELSIUS\",\"timestamp\":1734531936000}";
         String output = processor.map(input);
         JsonNode node = objectMapper.readTree(output);
 
-        assertEquals("FILE_CHANGED", node.get("eventType").asText());
-        assertEquals("WS-AGENT", node.get("deviceId").asText());
-        assertEquals("test.txt", node.get("filename").asText());
+        assertEquals("TEMPERATURE_REPORT", node.get("eventType").asText());
+        assertEquals("IOT-AGENT", node.get("deviceId").asText());
+        assertEquals(105.5, node.get("temperature").asDouble());
         assertTrue(node.has("processedTimestamp"));
     }
 

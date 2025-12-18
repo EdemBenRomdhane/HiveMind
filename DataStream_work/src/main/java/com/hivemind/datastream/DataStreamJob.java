@@ -30,7 +30,7 @@ public class DataStreamJob {
                                 .setBootstrapServers(KafkaConfig.BOOTSTRAP_SERVERS)
                                 .setTopics(KafkaConfig.ALL_TOPICS)
                                 .setGroupId(KafkaConfig.CONSUMER_GROUP_ID)
-                                .setStartingOffsets(OffsetsInitializer.latest())
+                                .setStartingOffsets(OffsetsInitializer.earliest())
                                 .setValueOnlyDeserializer(new SimpleStringSchema())
                                 .build();
 

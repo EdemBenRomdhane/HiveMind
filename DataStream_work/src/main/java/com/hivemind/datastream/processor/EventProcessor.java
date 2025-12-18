@@ -42,9 +42,22 @@ public class EventProcessor implements MapFunction<String, String> {
             processedEvent.put("filename", filename);
             processedEvent.put("changeType", changeType);
 
-            // Keep original timestamp if present
+            // SPECIAL CASE: IoT Temperature
+            if (rawNode.has("temperature")) {
+                processedEvent.put("temperature", rawNode.get("temperature").asDouble());
+            }
+
+            // Handle original timestamp (Long or ISO String)
             if (rawNode.has("timestamp")) {
-                processedEvent.put("eventTimestamp", rawNode.get("timestamp").asLong());
+                JsonNode tsNode = rawNode.get("timestamp");
+                if (tsNode.isNumber()) {
+                    processedEvent.put("eventTimestamp", tsNode.asLong());
+                } else {
+                    processedEvent.put("originalTimestamp", tsNode.asText());
+                    // Fallback to current time for eventTimestamp if string format (or parse it
+                    // if needed)
+                    processedEvent.put("eventTimestamp", System.currentTimeMillis());
+                }
             }
 
         } catch (Exception e) {

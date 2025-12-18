@@ -1,0 +1,226 @@
+version: '3.8'
+
+# ============================================================================
+# HiveMind - LITE Docker Compose
+# Core services only (No ELK, No Grafana)
+# ============================================================================
+
+services:
+
+  # ============ MESSAGE BROKER (KAFKA) ============
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka-lite
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms200M -Xmx200M"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    networks:
+      - hivemind-lite
+
+  # ============ DATABASE (CASSANDRA) ============
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra-lite
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=HiveMindCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - MAX_HEAP_SIZE=400M
+      - HEAP_NEWSIZE=100M
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+    networks:
+      - hivemind-lite
+    healthcheck:
+      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ] || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============ BACKEND SERVICE ============
+  backend-service:
+    build:
+      context: ./database-backend
+      dockerfile: Dockerfile
+    container_name: backend-lite
+    ports:
+      - "8089:8080"
+    restart: always
+    environment:
+      - SPRING_CASSANDRA_CONTACT_POINTS=cassandra
+      - SPRING_CASSANDRA_PORT=9042
+      - SPRING_CASSANDRA_LOCAL_DATACENTER=datacenter1
+      - SPRING_CASSANDRA_KEYSPACE_NAME=hivemind
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - JAVA_OPTS=-Xms256m -Xmx384m
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+    networks:
+      - hivemind-lite
+    depends_on:
+      cassandra:
+        condition: service_healthy
+
+  # ============ STREAM PROCESSING (FLINK) ============
+  jobmanager:
+    image: flink:1.18-java17
+    container_name: flink-jobmanager-lite
+    ports:
+      - "8085:8081"
+    command: jobmanager
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        jobmanager.memory.process.size: 1000m
+    deploy:
+      resources:
+        limits:
+          memory: 1200M
+    networks:
+      - hivemind-lite
+    depends_on:
+      - kafka
+
+  taskmanager:
+    image: flink:1.18-java17
+    container_name: flink-taskmanager-lite
+    command: taskmanager
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 1
+        taskmanager.memory.process.size: 1000m
+    deploy:
+      resources:
+        limits:
+          memory: 1200M
+    networks:
+      - hivemind-lite
+    depends_on:
+      - jobmanager
+
+  # ============ FLINK JOB SUBMITTER ============
+  flink-job-submitter:
+    image: flink:1.18-java17
+    container_name: flink-job-submitter-lite
+    volumes:
+      - ./DataStream_work/target:/opt/flink/usrlib
+      - ./DataStream_work/submit-job.sh:/opt/flink/submit-job.sh
+    command: /bin/bash /opt/flink/submit-job.sh
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+    networks:
+      - hivemind-lite
+    depends_on:
+      - jobmanager
+      - taskmanager
+
+  # ============ ANOMALY DETECTION SERVICE ============
+  anomaly-detection-service:
+    build:
+      context: ./anomaly-detection-service
+      dockerfile: Dockerfile
+    container_name: anomaly-lite
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - JAVA_OPTS=-Xms128m -Xmx192m
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    networks:
+      - hivemind-lite
+    depends_on:
+      - kafka
+
+  # ============ MAILING SERVICE & MAILHOG ============
+  mailing-service:
+    build:
+      context: ./mailing-service
+      dockerfile: Dockerfile
+    container_name: mailing-lite
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - TOPIC_ALERTS=anomaly-alerts
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - FROM_EMAIL=alerts@hivemind.local
+      - TO_EMAIL=admin@hivemind.local
+      - JAVA_OPTS=-Xmx64m
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    depends_on:
+      - kafka
+      - mailhog
+    networks:
+      - hivemind-lite
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog-lite
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+    networks:
+      - hivemind-lite
+
+  # ============ IOT BRIDGE (KAFKA REST PROXY) ============
+  kafka-rest:
+    image: confluentinc/cp-kafka-rest:7.4.0
+    container_name: kafka-rest-lite
+    ports:
+      - "8083:8082"
+    environment:
+      KAFKA_REST_HOST_NAME: kafka-rest
+      KAFKA_REST_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - hivemind-lite
+    depends_on:
+      - kafka
+
+networks:
+  hivemind-lite:
+    driver: bridge

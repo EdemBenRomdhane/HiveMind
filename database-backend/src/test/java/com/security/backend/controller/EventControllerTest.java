@@ -13,6 +13,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
@@ -65,5 +66,27 @@ class EventControllerTest {
         mockMvc.perform(get("/api/events/device/WS-001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void testGetEventById() throws Exception {
+        UUID id = UUID.randomUUID();
+        SecurityEvent event = new SecurityEvent();
+        event.setEventId(id);
+
+        when(eventService.getEventById(id)).thenReturn(Optional.of(event));
+
+        mockMvc.perform(get("/api/events/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventId").exists());
+    }
+
+    @Test
+    void testDeleteEvent() throws Exception {
+        UUID id = UUID.randomUUID();
+        doNothing().when(eventService).deleteEvent(id);
+
+        mockMvc.perform(delete("/api/events/" + id))
+                .andExpect(status().isNoContent());
     }
 }

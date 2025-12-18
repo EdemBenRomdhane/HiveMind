@@ -107,8 +107,7 @@ Je peux créer un topic spécial `high-severity-alerts` qui ne contiendra que le
 ### Docker Compose
 
 Tous les services sont conteneurisés:
-- **Kafka**: Port 9094
-- **Zookeeper**: Port 2181
+- **Kafka**: Port 9094 (KRaft mode)
 - **Flink JobManager**: Port 8081 (Web UI)
 - **Flink TaskManager**: Traitement interne
 - **Spring Boot API**: Port 8080
@@ -164,7 +163,6 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9094
 - `8080` - Spring Boot API
 - `8081` - Flink Web UI
 - `9094` - Kafka (externe)
-- `2181` - Zookeeper
 
 ---
 

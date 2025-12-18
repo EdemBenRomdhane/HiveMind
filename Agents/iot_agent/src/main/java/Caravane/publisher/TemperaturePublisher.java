@@ -14,7 +14,19 @@ public class TemperaturePublisher {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    public TemperaturePublisher() {
+    }
+
+    public TemperaturePublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
     private final Random random = new Random();
+    private boolean running = true;
+
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
 
     @PostConstruct
     public void init() {
@@ -23,7 +35,7 @@ public class TemperaturePublisher {
 
     public void startReporting() {
         new Thread(() -> {
-            while (true) {
+            while (running) {
                 try {
                     // Generate random temperature between 20.0 and 30.0
                     double temp = 20.0 + (10.0 * random.nextDouble());

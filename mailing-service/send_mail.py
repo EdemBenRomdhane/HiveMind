@@ -64,13 +64,13 @@ def start_consumer():
     while not consumer:
         try:
             consumer = KafkaConsumer(
-                TOPIC_ALERTS,
+                "ai-alerts", "anomaly-alerts",
                 bootstrap_servers=KAFKA_BROKER,
                 group_id="mailing-service-group",
                 auto_offset_reset='latest',
                 value_deserializer=lambda x: json.loads(x.decode('utf-8'))
             )
-            print("✅ Connected to Kafka for Mailing Service!")
+            print("✅ Connected to Kafka for Mailing Service (AI + Anomaly)!")
         except KafkaError as e:
             print(f"⚠️ Kafka connection failed ({e}). Retrying in 5s...")
             time.sleep(5)
@@ -78,10 +78,10 @@ def start_consumer():
     for message in consumer:
         try:
             alert = message.value
-            print(f"Received alert: {alert}")
+            print(f"📥 Received alert from topic [{message.topic}]: {alert}")
             send_alert_email(alert)
         except Exception as e:
-            print(f"Error processing message: {e}")
+            print(f"❌ Error processing message: {e}")
 
 if __name__ == "__main__":
     # Also simple health check loop or just blocking consumer
